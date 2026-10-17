@@ -157,6 +157,14 @@ export function ApartmentDetail() {
             </div>
           </div>
         )}
+
+        {tab === 'cleaning' && (
+          <CleaningHistoryList apartmentId={aptId} canDelete={false} />
+        )}
+
+        {tab === 'incidents' && (
+          <IncidentHistoryList apartmentId={aptId} canDelete={false} />
+        )}
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 z-20 bg-surface/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
@@ -182,7 +190,6 @@ export function ApartmentDetail() {
 }
 
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: React.ComponentType<{ className?: string }>; label: string }) {
-  const { t } = useI18n()
   return (
     <button
       onClick={onClick}

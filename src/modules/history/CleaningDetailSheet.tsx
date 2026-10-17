@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Loader as Loader2, X, Trash2, Camera, Video } from 'lucide-react'
+import { Loader as Loader2, X, Trash2, Camera, Video, RotateCcw } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { formatDateTime, formatQty } from '@/lib/format'
 import { friendlyMessage, toApiError } from '@/lib/errors'
@@ -15,6 +15,8 @@ interface Props {
   canDelete: boolean
   onClose: () => void
   onDeleted: () => void
+  onRecalculate?: (eventId: string) => void
+  onReverse?: (eventId: string) => void
 }
 
 function isVideoPath(path: string): boolean {
@@ -22,7 +24,7 @@ function isVideoPath(path: string): boolean {
   return ext === 'mp4' || ext === 'mov' || ext === 'webm'
 }
 
-export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted }: Props) {
+export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted, onRecalculate, onReverse }: Props) {
   const { t, n } = useI18n()
   const [lines, setLines] = useState<SvCleaningEventLineRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,6 +146,26 @@ export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted }: Pr
             >
               <Trash2 className="w-4 h-4" />
               {t.history.delete}
+            </button>
+          )}
+
+          {event.status === 'done' && onRecalculate && (
+            <button
+              onClick={() => onRecalculate(event.id)}
+              className="w-full bg-app text-ink rounded-xl py-3 font-medium text-sm flex items-center justify-center gap-2 border border-line"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {t.admin.apartments.recalculate}
+            </button>
+          )}
+
+          {event.status === 'done' && onReverse && (
+            <button
+              onClick={() => onReverse(event.id)}
+              className="w-full bg-bad-soft text-bad rounded-xl py-3 font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {t.admin.apartments.reverse}
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { toApiError } from '@/lib/errors'
+import { cairoLocalToISO } from '@/lib/format'
 import type {
   SvCleaningEventRow,
   SvCleaningEventLineRow,
@@ -24,8 +25,14 @@ function buildCleaningQuery(apartmentId: number | null, filters: CleaningHistory
 
   if (apartmentId != null) q = q.eq('apartment_id', apartmentId)
   if (filters.search.trim()) q = q.ilike('search_text', `%${escapeIlike(filters.search.trim())}%`)
-  if (filters.dateFrom) q = q.gte('cleaned_at', filters.dateFrom)
-  if (filters.dateTo) q = q.lte('cleaned_at', filters.dateTo + 'T23:59:59')
+  if (filters.dateFrom) {
+    const iso = cairoLocalToISO(filters.dateFrom + 'T00:00')
+    if (iso) q = q.gte('cleaned_at', iso)
+  }
+  if (filters.dateTo) {
+    const iso = cairoLocalToISO(filters.dateTo + 'T23:59')
+    if (iso) q = q.lte('cleaned_at', iso)
+  }
   if (filters.hasMedia) q = q.not('media_paths', 'eq', '{}')
   if (filters.status) q = q.eq('status', filters.status)
   if (filters.leadStaff.trim()) q = q.ilike('lead_staff_name', `%${escapeIlike(filters.leadStaff.trim())}%`)
@@ -65,8 +72,14 @@ function buildIncidentQuery(apartmentId: number | null, filters: IncidentHistory
 
   if (apartmentId != null) q = q.eq('apartment_id', apartmentId)
   if (filters.search.trim()) q = q.ilike('search_text', `%${escapeIlike(filters.search.trim())}%`)
-  if (filters.dateFrom) q = q.gte('created_at', filters.dateFrom)
-  if (filters.dateTo) q = q.lte('created_at', filters.dateTo + 'T23:59:59')
+  if (filters.dateFrom) {
+    const iso = cairoLocalToISO(filters.dateFrom + 'T00:00')
+    if (iso) q = q.gte('created_at', iso)
+  }
+  if (filters.dateTo) {
+    const iso = cairoLocalToISO(filters.dateTo + 'T23:59')
+    if (iso) q = q.lte('created_at', iso)
+  }
   if (filters.hasMedia) q = q.not('photo_paths', 'eq', '{}')
   if (filters.status) q = q.eq('status', filters.status)
   if (filters.kind) q = q.eq('kind', filters.kind)

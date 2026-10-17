@@ -5,7 +5,6 @@ import {
   fetchApartmentGaps,
   fetchNormRules,
   fetchTemplateNorms,
-  fetchCleaningEvents,
   fetchAllStaff,
   issueMissing,
   reverseCleaning,
@@ -14,11 +13,11 @@ import {
   deleteNormRule,
   fetchWarehouseStock,
 } from '@/modules/admin/api'
-import type { Apartment, ApartmentGapRow, NormRuleRow, CleaningEventRow, Staff, WarehouseStockRow, IssueMissingResult, NormType } from '@/lib/database.types'
+import type { Apartment, ApartmentGapRow, NormRuleRow, Staff, WarehouseStockRow, IssueMissingResult, NormType } from '@/lib/database.types'
 import { useI18n } from '@/i18n'
-import { formatDateTime, formatQty, cairoLocalToISO } from '@/lib/format'
+import { cairoLocalToISO } from '@/lib/format'
 import { toast, errorMessage } from '@/lib/toast'
-import { ClipboardList, History, Plus, Trash2, CreditCard as Edit3, Gift, RotateCcw, X, Check, Loader as Loader2, Wrench } from 'lucide-react'
+import { ClipboardList, History, Plus, Trash2, CreditCard as Edit3, Gift, X, Check, Loader as Loader2, Wrench } from 'lucide-react'
 import { ErrorState } from '@/components/ErrorState'
 import { friendlyMessage } from '@/lib/errors'
 import { CleaningHistoryList } from '@/modules/history/CleaningHistoryList'
@@ -56,7 +55,6 @@ export function AdminApartmentDetail() {
   const [gaps, setGaps] = useState<ApartmentGapRow[]>([])
   const [overrideNorms, setOverrideNorms] = useState<NormRuleRow[]>([])
   const [templateNorms, setTemplateNorms] = useState<NormRuleRow[]>([])
-  const [events, setEvents] = useState<CleaningEventRow[]>([])
   const [staffList, setStaffList] = useState<Staff[]>([])
   const [stock, setStock] = useState<WarehouseStockRow[]>([])
   const [tab, setTab] = useState<Tab>('norms')
@@ -70,6 +68,7 @@ export function AdminApartmentDetail() {
   const [recalcEventId, setRecalcEventId] = useState<string | null>(null)
   const [recalcDate, setRecalcDate] = useState('')
   const [recalcStaffIds, setRecalcStaffIds] = useState<number[]>([])
+  const [historyRefresh, setHistoryRefresh] = useState(0)
 
   const loadAll = () => {
     if (!aptId) return
@@ -79,11 +78,10 @@ export function AdminApartmentDetail() {
       fetchApartmentsAdmin(),
       fetchApartmentGaps(),
       fetchNormRules(aptId),
-      fetchCleaningEvents(aptId),
       fetchAllStaff(),
       fetchWarehouseStock(),
     ])
-      .then(([apts, ga, norms, ev, st, wh]) => {
+      .then(([apts, ga, norms, st, wh]) => {
         const apt = apts.find((a) => a.id === aptId) ?? null
         setApartment(apt)
         setGaps(ga.filter((g) => g.apartment_id === aptId))
@@ -91,7 +89,6 @@ export function AdminApartmentDetail() {
         if (apt) {
           fetchTemplateNorms(apt.type).then(setTemplateNorms).catch((e) => console.error(friendlyMessage(e)))
         }
-        setEvents(ev)
         setStaffList(st)
         setStock(wh)
       })
@@ -130,7 +127,7 @@ export function AdminApartmentDetail() {
       toast(t.admin.apartments.reversed, 'success')
       setReverseEventId(null)
       setReverseReason('')
-      loadAll()
+      setHistoryRefresh((k) => k + 1)
     } catch (e) {
       toast(errorMessage(e), 'error')
     }
@@ -147,7 +144,7 @@ export function AdminApartmentDetail() {
       setRecalcEventId(null)
       setRecalcDate('')
       setRecalcStaffIds([])
-      loadAll()
+      setHistoryRefresh((k) => k + 1)
     } catch (e) {
       toast(errorMessage(e), 'error')
     }
@@ -290,14 +287,20 @@ export function AdminApartmentDetail() {
             {/* Cleaning history tab */}
             {tab === 'cleaning' && (
               <div className="mt-4">
-                <CleaningHistoryList apartmentId={aptId} canDelete={true} />
+                <CleaningHistoryList
+                  apartmentId={aptId}
+                  canDelete={true}
+                  onRecalculate={(eid) => setRecalcEventId(eid)}
+                  onReverse={(eid) => setReverseEventId(eid)}
+                  refreshKey={historyRefresh}
+                />
               </div>
             )}
 
             {/* Incidents tab */}
             {tab === 'incidents' && (
               <div className="mt-4">
-                <IncidentHistoryList apartmentId={aptId} canDelete={true} />
+                <IncidentHistoryList apartmentId={aptId} canDelete={true} refreshKey={historyRefresh} />
               </div>
             )}
           </div>
@@ -451,7 +454,6 @@ export function AdminApartmentDetail() {
 }
 
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: React.ComponentType<{ className?: string }>; label: string }) {
-  const { t } = useI18n()
   return (
     <button
       onClick={onClick}
@@ -464,7 +466,6 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
 }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  const { t } = useI18n()
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-[70]" onClick={onClose} />
