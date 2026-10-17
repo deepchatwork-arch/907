@@ -7,7 +7,30 @@ import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
 import { friendlyMessage } from '@/lib/errors'
 import { ErrorState } from '@/components/ErrorState'
-import { ArrowLeft, Camera, X, Loader as Loader2 } from 'lucide-react'
+import { resolveMime } from '@/lib/files'
+import { currentDict } from '@/i18n'
+import { ArrowLeft, Camera, Video as VideoIcon, X, Loader as Loader2 } from 'lucide-react'
+
+const MAX_FILES = 6
+const MAX_FILE_SIZE = 50 * 1024 * 1024
+
+const ACCEPTED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const ACCEPTED_VIDEO_MIMES = new Set(['video/mp4', 'video/quicktime', 'video/webm'])
+
+function isVideoFile(file: File): boolean {
+  const mime = resolveMime(file)
+  return !!mime && ACCEPTED_VIDEO_MIMES.has(mime)
+}
+
+function validateMediaFile(file: File): string | null {
+  const mime = resolveMime(file)
+  const d = currentDict().incidents
+  if (!mime || (!ACCEPTED_IMAGE_MIMES.has(mime) && !ACCEPTED_VIDEO_MIMES.has(mime))) {
+    return d.mediaError
+  }
+  if (file.size > MAX_FILE_SIZE) return d.mediaTooBig
+  return null
+}
 
 export function IncidentForm({ backTo }: { backTo?: string }) {
   const { t } = useI18n()
@@ -55,10 +78,25 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
   }, [profile?.id])
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).slice(0, 3 - photos.length)
-    if (files.length === 0) return
-    setPhotos((prev) => [...prev, ...files])
-    setPhotoPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))])
+    const incoming = Array.from(e.target.files ?? [])
+    const remaining = MAX_FILES - photos.length
+    if (remaining <= 0) {
+      setError(t.incidents.mediaTooMany)
+      e.target.value = ''
+      return
+    }
+    const files = incoming.slice(0, remaining)
+    const valid: File[] = []
+    for (const file of files) {
+      const err = validateMediaFile(file)
+      if (err) { setError(err); e.target.value = ''; return }
+      valid.push(file)
+    }
+    if (valid.length === 0) return
+    setError(null)
+    setPhotos((prev) => [...prev, ...valid])
+    setPhotoPreviews((prev) => [...prev, ...valid.map((f) => URL.createObjectURL(f))])
+    e.target.value = ''
   }
 
   const removePhoto = (idx: number) => {
@@ -142,21 +180,31 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
         </Field>
         <Field label={t.incidents.photos}>
           <div className="flex gap-2 flex-wrap">
-            {photoPreviews.map((src, idx) => (
-              <div key={idx} className="relative w-20 h-20">
-                <img src={src} alt="" className="w-full h-full object-cover rounded-xl" />
-                <button onClick={() => removePhoto(idx)} className="absolute -top-1 -right-1 w-5 h-5 bg-bad text-white rounded-full flex items-center justify-center">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            {photos.length < 3 && isOnline && (
+            {photoPreviews.map((src, idx) => {
+              const file = photos[idx]
+              const isVideo = file ? isVideoFile(file) : false
+              return (
+                <div key={idx} className="relative w-20 h-20">
+                  {isVideo ? (
+                    <div className="w-full h-full bg-app rounded-xl border border-line flex items-center justify-center">
+                      <VideoIcon className="w-6 h-6 text-muted" />
+                    </div>
+                  ) : (
+                    <img src={src} alt="" className="w-full h-full object-cover rounded-xl" />
+                  )}
+                  <button onClick={() => removePhoto(idx)} className="absolute -top-1 -right-1 w-5 h-5 bg-bad text-white rounded-full flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )
+            })}
+            {photos.length < MAX_FILES && isOnline && (
               <button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 border-2 border-dashed border-line rounded-xl flex items-center justify-center text-muted hover:border-accent">
                 <Camera className="w-6 h-6" />
               </button>
             )}
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotoSelect} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.webm" multiple onChange={handlePhotoSelect} className="hidden" />
         </Field>
         {error && <p className="text-sm text-bad">{error}</p>}
       </div>

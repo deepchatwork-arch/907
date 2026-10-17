@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { toApiError } from '@/lib/errors'
 import { compressImage } from '@/lib/compress'
-import { isHeicFile, validateVideo } from '@/lib/files'
+import { isHeicFile, validateVideo, resolveMime } from '@/lib/files'
 import { currentDict } from '@/i18n'
 import type { Incident, IncidentKind, SvItem } from '@/lib/database.types'
 import { fetchAllPages } from '@/lib/paginate'
@@ -72,6 +72,18 @@ export async function uploadIncidentPhoto(
     } catch {
       throw toApiError(new Error(currentDict().heicNotSupported))
     }
+  }
+
+  const mime = resolveMime(file)
+
+  if (mime && (mime === 'video/mp4' || mime === 'video/quicktime' || mime === 'video/webm')) {
+    const ext = mime === 'video/quicktime' ? '.mov' : mime === 'video/webm' ? '.webm' : '.mp4'
+    const path = `${userId}/${crypto.randomUUID()}${ext}`
+    const { error } = await supabase.storage
+      .from('incident-photos')
+      .upload(path, file, { contentType: mime })
+    if (error) throw toApiError(error)
+    return path
   }
 
   const uuid = crypto.randomUUID()
