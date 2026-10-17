@@ -152,6 +152,7 @@ export const ar: Dict = {
   emailConfirmDisabled: 'اطف تأكيد الإيميل في إعدادات Auth',
   sessionError: 'غلط في إنشاء الجلسة',
   profileNotCreated: 'غلط: الملف الشخصي ما اتعملش',
+  bootstrapTaken: 'الحساب موجود بالفعل. ادخل باسم الدخول الحالي.',
   invalidPhoneFormat: 'التليفون لازم يكون بصيغة +1234567890',
   categoryHasItems: 'الفئة فيها أصناف',
   heicNotSupported: 'صيغة HEIC مش مدعومة، صور بصيغة JPEG',

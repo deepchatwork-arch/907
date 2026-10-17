@@ -149,6 +149,7 @@ export const ru = {
   emailConfirmDisabled: 'Отключите подтверждение email в настройках Auth',
   sessionError: 'Ошибка создания сессии',
   profileNotCreated: 'Ошибка: профиль не создан',
+  bootstrapTaken: 'Учётная запись уже создана. Войдите с существующим логином.',
   invalidPhoneFormat: 'Телефон должен быть в формате +1234567890',
   categoryHasItems: 'В категории есть позиции',
   heicNotSupported: 'Формат HEIC не поддерживается, снимите в JPEG',

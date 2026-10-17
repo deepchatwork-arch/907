@@ -1,11 +1,26 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth, homePathForRole, setupAuthListener } from '@/modules/core/store'
 import { BootstrapScreen, LoginScreen } from '@/modules/core/AuthScreens'
-import { SvRoutes, AdminRoutes, QrRoutes } from '@/modules/registry'
+import { SvRoutes, AdminRoutes } from '@/modules/registry'
 import { useI18n } from '@/i18n'
 import { Package, RefreshCw } from 'lucide-react'
 import { ToastContainer } from '@/lib/toast'
+
+function QrRedirect() {
+  const location = useLocation()
+  const path = location.pathname
+  const match = path.match(/^\/qr(?:\/(\d+))?(?:\/(clean|incident|history))?$/)
+  const id = match?.[1]
+  const action = match?.[2]
+  const hash = id
+    ? action
+      ? `#/qr/${id}/${action}`
+      : `#/qr/${id}`
+    : '#/qr'
+  window.location.replace(`/qr.html${hash}`)
+  return null
+}
 
 function App() {
   const { t, lang } = useI18n()
@@ -57,8 +72,8 @@ function App() {
     content = (
       <BrowserRouter>
         <Routes>
+          <Route path="/qr/*" element={<QrRedirect />} />
           <Route path="/sv/*" element={role === 'admin' || role === 'supervisor' ? <SvRoutes /> : <Navigate to={home} replace />} />
-          <Route path="/qr/*" element={role === 'admin' || role === 'manager' || role === 'supervisor' ? <QrRoutes /> : <Navigate to={home} replace />} />
           <Route path="/admin/*" element={role === 'admin' ? <AdminRoutes /> : <Navigate to={home} replace />} />
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>

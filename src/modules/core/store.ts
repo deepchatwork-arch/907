@@ -151,6 +151,11 @@ export const useAuth = create<AuthStore>((set, get) => ({
 
   bootstrap: async (login, fullName, password) => {
     set({ error: null })
+    const { data: stillNeeds } = await supabase.rpc('needs_bootstrap')
+    if (!stillNeeds) {
+      set({ state: 'login', error: currentDict().bootstrapTaken })
+      return
+    }
     const email = `${login.toLowerCase().trim()}@sklad.internal`
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
     if (signUpError) {

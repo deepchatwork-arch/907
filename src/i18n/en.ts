@@ -151,6 +151,7 @@ export const en: Dict = {
   emailConfirmDisabled: 'Disable email confirmation in Auth settings',
   sessionError: 'Session creation error',
   profileNotCreated: 'Error: profile not created',
+  bootstrapTaken: 'An account already exists. Sign in with your existing login.',
   invalidPhoneFormat: 'Phone must be in +1234567890 format',
   categoryHasItems: 'Category has items',
   heicNotSupported: 'HEIC format is not supported, shoot in JPEG',
