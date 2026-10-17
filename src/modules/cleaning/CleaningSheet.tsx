@@ -4,13 +4,15 @@ import { fetchNorms, fetchStaff } from '@/modules/apartments/api'
 import { completeCleaning, queueCleaningOffline, isNetworkError } from '@/modules/cleaning/api'
 import { useAuth } from '@/modules/core/store'
 import type { SvNorm, SvStaff, NormType, CleaningResult } from '@/lib/database.types'
-import { useI18n } from '@/i18n'
+import { useI18n, currentDict } from '@/i18n'
 import { friendlyMessage } from '@/lib/errors'
 import { formatQty } from '@/lib/format'
-import { X, Check, Loader as Loader2, TriangleAlert as AlertTriangle, Star, RefreshCw } from 'lucide-react'
+import { validateCleaningMedia, isVideoFile } from '@/lib/files'
+import { X, Check, Loader as Loader2, TriangleAlert as AlertTriangle, Star, RefreshCw, Camera, Video as VideoIcon } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 const writeoffTypes: NormType[] = ['turnover_replenish', 'cleaning_consumption']
+const MAX_MEDIA = 6
 
 export function CleaningSheet({ backTo }: { backTo?: string }) {
   const { t, n } = useI18n()
@@ -26,6 +28,8 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
   const [selectedStaff, setSelectedStaff] = useState<number[]>([])
   const [leadStaffId, setLeadStaffId] = useState<number | null>(null)
   const [note, setNote] = useState('')
+  const [media, setMedia] = useState<File[]>([])
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<CleaningResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +37,9 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
   const [goBackTimer, setGoBackTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [confirmClose, setConfirmClose] = useState(false)
   const clientOpIdRef = useRef<string>(crypto.randomUUID())
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const hasUnsavedInput = selectedStaff.length > 0 || note.trim().length > 0
+  const hasUnsavedInput = selectedStaff.length > 0 || note.trim().length > 0 || media.length > 0
 
   const handleBackdropClick = () => {
     if (hasUnsavedInput) setConfirmClose(true)
@@ -73,8 +78,9 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
   useEffect(() => {
     return () => {
       if (goBackTimer) clearTimeout(goBackTimer)
+      mediaPreviews.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [goBackTimer])
+  }, [goBackTimer, mediaPreviews])
 
   const writeoffItems = useMemo(() => norms.filter((nr) => writeoffTypes.includes(nr.norm_type)), [norms])
   const needsStaff = writeoffItems.length > 0
@@ -94,6 +100,33 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
 
   const setLead = (staffId: number) => { if (selectedStaff.includes(staffId)) setLeadStaffId(staffId) }
 
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const incoming = Array.from(e.target.files ?? [])
+    const remaining = MAX_MEDIA - media.length
+    if (remaining <= 0) {
+      setError(currentDict().cleaning.mediaTooMany)
+      e.target.value = ''
+      return
+    }
+    const files = incoming.slice(0, remaining)
+    const valid: File[] = []
+    for (const file of files) {
+      const err = validateCleaningMedia(file)
+      if (err) { setError(err); e.target.value = ''; return }
+      valid.push(file)
+    }
+    if (valid.length === 0) return
+    setError(null)
+    setMedia((prev) => [...prev, ...valid])
+    setMediaPreviews((prev) => [...prev, ...valid.map((f) => URL.createObjectURL(f))])
+    e.target.value = ''
+  }
+
+  const removeMedia = (idx: number) => {
+    setMedia((prev) => prev.filter((_, i) => i !== idx))
+    setMediaPreviews((prev) => { URL.revokeObjectURL(prev[idx]); return prev.filter((_, i) => i !== idx) })
+  }
+
   const handleConfirm = async () => {
     if (needsStaff && selectedStaff.length === 0) { setError(t.cleaning.needLead); return }
     if (!profile) return
@@ -108,6 +141,7 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
       staffIds: selectedStaff,
       leadStaffId: leadStaffId ?? selectedStaff[0] ?? null,
       note: note.trim() || null,
+      media: media.length > 0 ? media : undefined,
     }
     try {
       if (!navigator.onLine) {
@@ -216,6 +250,35 @@ export function CleaningSheet({ backTo }: { backTo?: string }) {
             <label className="block text-sm font-medium text-ink mb-2">{t.cleaning.note}</label>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.cleaning.notePlaceholder} rows={2}
               className="w-full bg-app rounded-xl px-3 py-2.5 text-sm border border-line focus:border-accent focus:outline-none resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-2">{t.cleaning.media}</label>
+            <div className="flex gap-2 flex-wrap">
+              {mediaPreviews.map((src, idx) => {
+                const file = media[idx]
+                const isVideo = file ? isVideoFile(file) : false
+                return (
+                  <div key={idx} className="relative w-20 h-20">
+                    {isVideo ? (
+                      <div className="w-full h-full bg-app rounded-xl border border-line flex items-center justify-center">
+                        <VideoIcon className="w-6 h-6 text-muted" />
+                      </div>
+                    ) : (
+                      <img src={src} alt="" className="w-full h-full object-cover rounded-xl" />
+                    )}
+                    <button onClick={() => removeMedia(idx)} className="absolute -top-1 -right-1 w-5 h-5 bg-bad text-white rounded-full flex items-center justify-center">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )
+              })}
+              {media.length < MAX_MEDIA && (
+                <button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 border-2 border-dashed border-line rounded-xl flex items-center justify-center text-muted hover:border-accent">
+                  <Camera className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.webm" multiple onChange={handleMediaSelect} className="hidden" />
           </div>
           {error && (
             <div className="flex items-start gap-2 bg-bad-soft border border-line rounded-xl px-3 py-2.5">

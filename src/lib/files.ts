@@ -60,6 +60,22 @@ export function isImageFile(file: File): boolean {
   return !!mime && IMAGE_MIMES.has(mime)
 }
 
+const CLEANING_MEDIA_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'])
+const CLEANING_MEDIA_MAX = 50 * 1024 * 1024
+
+export function validateCleaningMedia(file: File): string | null {
+  const mime = resolveMime(file)
+  const d = currentDict().cleaning
+  if (!mime || !CLEANING_MEDIA_MIMES.has(mime)) return d.mediaError
+  if (file.size > CLEANING_MEDIA_MAX) return d.mediaTooBig
+  return null
+}
+
+export function isVideoFile(file: File): boolean {
+  const mime = resolveMime(file)
+  return !!mime && VIDEO_MIMES.has(mime)
+}
+
 export function isHeicFile(file: File): boolean {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
   return ext === 'heic' || ext === 'heif' || file.type === 'image/heic' || file.type === 'image/heif'

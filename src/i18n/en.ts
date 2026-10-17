@@ -66,6 +66,12 @@ export const en: Dict = {
     note: 'Note',
     notePlaceholder: 'Optional note…',
     confirmClose: 'Close without saving?',
+    media: 'Photos and video (up to 6)',
+    mediaError: 'Unsupported format (need JPEG/PNG/WebP/MP4/MOV/WebM)',
+    mediaTooBig: 'File exceeds 50 MB',
+    mediaTooMany: 'Maximum 6 files',
+    mediaFailed: 'Failed to upload media',
+    mediaRetry: 'Retry media',
   },
   incidents: {
     title: 'New request',

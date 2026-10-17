@@ -67,6 +67,12 @@ export const ar: Dict = {
     note: 'ملاحظة',
     notePlaceholder: 'ملاحظة اختيارية…',
     confirmClose: 'تقفل من غير حفظ؟',
+    media: 'صور وفيديو (حد ٦)',
+    mediaError: 'صيغة مش مدعومة (لازم JPEG/PNG/WebP/MP4/MOV/WebM)',
+    mediaTooBig: 'الملف أكبر من ٥٠ ميجا',
+    mediaTooMany: 'حد أقصى ٦ ملفات',
+    mediaFailed: 'فشل تحميل الميديا',
+    mediaRetry: 'إعادة الميديا',
   },
   incidents: {
     title: 'طلب جديد',

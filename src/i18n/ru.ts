@@ -64,6 +64,12 @@ export const ru = {
     note: 'Примечание',
     notePlaceholder: 'Необязательное примечание…',
     confirmClose: 'Закрыть без сохранения?',
+    media: 'Фото и видео (до 6)',
+    mediaError: 'Неподдерживаемый формат (нужен JPEG/PNG/WebP/MP4/MOV/WebM)',
+    mediaTooBig: 'Файл больше 50 МБ',
+    mediaTooMany: 'Максимум 6 файлов',
+    mediaFailed: 'Не удалось загрузить медиа',
+    mediaRetry: 'Повторить медиа',
   },
   incidents: {
     title: 'Новая заявка',
