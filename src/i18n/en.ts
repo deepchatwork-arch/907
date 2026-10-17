@@ -72,6 +72,10 @@ export const en: Dict = {
     mediaTooMany: 'Maximum 6 files',
     mediaFailed: 'Failed to upload media',
     mediaRetry: 'Retry media',
+    mediaPending: 'Media pending upload',
+    mediaWillRetry: 'Media will be sent later',
+    mediaTotalTooBig: 'Total media size exceeds 150 MB',
+    mediaDelete: 'Delete media',
   },
   incidents: {
     title: 'New request',
@@ -168,6 +172,10 @@ export const en: Dict = {
     outboxRetry: 'Retry',
     outboxDelete: 'Delete',
     outboxSynced: 'Sent',
+    outboxMediaFailed: 'Media not sent',
+    outboxMediaRetry: 'Retry media',
+    outboxMediaDelete: 'Delete media',
+    outboxMediaPending: 'Media queued',
     loadFailed: 'Failed to load data',
   },
   common: {

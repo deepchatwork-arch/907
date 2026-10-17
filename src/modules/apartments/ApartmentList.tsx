@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchApartments } from '@/modules/apartments/api'
-import { getOutboxSummary, getOutboxEntries, subscribe, flushOutbox, deleteFailedEntry, retryFailedEntry, type OutboxEntry } from '@/lib/outbox'
+import { getOutboxSummary, getOutboxEntries, subscribe, flushOutbox, deleteFailedEntry, retryFailedEntry, retryMediaEntry, discardMediaEntry, type OutboxEntry } from '@/lib/outbox'
 import type { SvApartment, AptType } from '@/lib/database.types'
 import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
@@ -30,7 +30,10 @@ export function ApartmentList() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
+  const [mediaFailedCount, setMediaFailedCount] = useState(0)
+  const [mediaPendingCount, setMediaPendingCount] = useState(0)
   const [failedEntries, setFailedEntries] = useState<OutboxEntry[]>([])
+  const [mediaFailedEntries, setMediaFailedEntries] = useState<OutboxEntry[]>([])
   const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
@@ -44,9 +47,12 @@ export function ApartmentList() {
       getOutboxSummary(profile.id).then((s) => {
         setPendingCount(s.pending)
         setFailedCount(s.failed)
+        setMediaFailedCount(s.mediaFailed)
+        setMediaPendingCount(s.mediaPending)
       })
       getOutboxEntries(profile.id).then((entries) => {
         setFailedEntries(entries.filter((e) => e.status === 'failed'))
+        setMediaFailedEntries(entries.filter((e) => (e.mediaStatus ?? 'none') === 'failed'))
       })
     }
     refresh()
@@ -71,6 +77,15 @@ export function ApartmentList() {
 
   const handleDeleteFailed = async (id: string) => {
     await deleteFailedEntry(id)
+  }
+
+  const handleRetryMedia = async (id: string) => {
+    await retryMediaEntry(id)
+    if (profile) await flushOutbox(profile.id)
+  }
+
+  const handleDeleteMedia = async (id: string) => {
+    await discardMediaEntry(id)
   }
 
   const grouped = useMemo(() => {
@@ -114,13 +129,35 @@ export function ApartmentList() {
         </select>
       </div>
 
-      {pendingCount > 0 && (
+      {(pendingCount > 0 || mediaPendingCount > 0) && (
         <div className="mb-3 bg-warn-soft border border-line rounded-xl px-4 py-2.5 text-sm text-warn flex items-center justify-between">
-          <span>{t.errors.outboxQueued}: {n(String(pendingCount))}</span>
+          <span>{t.errors.outboxQueued}: {n(String(pendingCount))}{mediaPendingCount > 0 ? ` · ${t.errors.outboxMediaPending}: ${n(String(mediaPendingCount))}` : ''}</span>
           <button onClick={handleRetry} disabled={retrying} className="flex items-center gap-1 text-xs font-medium text-warn disabled:opacity-40">
             <RefreshCw className={`w-3.5 h-3.5 ${retrying ? 'animate-spin' : ''}`} />
             {t.errors.outboxRetry}
           </button>
+        </div>
+      )}
+
+      {mediaFailedCount > 0 && (
+        <div className="mb-3 bg-bad-soft border border-line rounded-xl px-4 py-2.5 space-y-2">
+          <div className="flex items-center gap-2 text-sm text-bad">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{t.errors.outboxMediaFailed}: {n(String(mediaFailedCount))}</span>
+          </div>
+          {mediaFailedEntries.map((entry) => (
+            <div key={entry.id} className="flex items-center justify-between gap-2 text-xs text-bad bg-surface rounded-lg px-3 py-2">
+              <span className="truncate flex-1">{entry.mediaError ?? 'Error'}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => handleRetryMedia(entry.id)} disabled={retrying} className="font-medium text-warn disabled:opacity-40">
+                  {t.errors.outboxMediaRetry}
+                </button>
+                <button onClick={() => handleDeleteMedia(entry.id)} className="font-medium text-bad">
+                  {t.errors.outboxMediaDelete}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

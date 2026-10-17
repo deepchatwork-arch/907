@@ -1,4 +1,4 @@
-import { get, update, set as idbSet } from 'idb-keyval'
+import { get, update, del as idbDel, set as idbSet } from 'idb-keyval'
 import { supabase } from '@/lib/supabase'
 import { toApiError } from '@/lib/errors'
 import { toast } from '@/lib/toast'
@@ -55,7 +55,11 @@ async function getMediaBlobs(entryId: string): Promise<Blob[] | undefined> {
 }
 
 async function removeMediaBlobs(entryId: string): Promise<void> {
-  await idbSet(mediaKey(entryId), null)
+  await idbDel(mediaKey(entryId))
+}
+
+function safeMediaStatus(e: OutboxEntry): MediaStatus {
+  return e.mediaStatus ?? 'none'
 }
 
 export async function getOutboxSummary(userId: string): Promise<{ pending: number; failed: number; mediaFailed: number; mediaPending: number }> {
@@ -64,8 +68,8 @@ export async function getOutboxSummary(userId: string): Promise<{ pending: numbe
   return {
     pending: mine.filter((e) => e.status === 'pending').length,
     failed: mine.filter((e) => e.status === 'failed').length,
-    mediaFailed: mine.filter((e) => e.mediaStatus === 'failed').length,
-    mediaPending: mine.filter((e) => e.mediaStatus === 'pending').length,
+    mediaFailed: mine.filter((e) => safeMediaStatus(e) === 'failed').length,
+    mediaPending: mine.filter((e) => safeMediaStatus(e) === 'pending').length,
   }
 }
 
@@ -74,10 +78,30 @@ export async function getOutboxEntries(userId: string): Promise<OutboxEntry[]> {
   return all.filter((e) => e.userId === userId).sort((a, b) => a.createdAt - b.createdAt)
 }
 
+export class QuotaExceededError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'QuotaExceededError'
+  }
+}
+
 export async function addOutboxEntry(entry: Omit<OutboxEntry, 'status' | 'lastError' | 'attempts' | 'mediaStatus' | 'mediaAttempts' | 'mediaError'> & { media?: Blob[] }): Promise<void> {
   const hasMedia = !!(entry.media && entry.media.length > 0)
+  const id = entry.id
+
+  if (hasMedia && entry.media) {
+    try {
+      await storeMediaBlobs(id, entry.media)
+    } catch (e) {
+      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        throw new QuotaExceededError(currentDict().cleaning.mediaTotalTooBig)
+      }
+      throw e
+    }
+  }
+
   const full: OutboxEntry = {
-    id: entry.id,
+    id,
     userId: entry.userId,
     apartmentId: entry.apartmentId,
     cleanedAt: entry.cleanedAt,
@@ -94,9 +118,6 @@ export async function addOutboxEntry(entry: Omit<OutboxEntry, 'status' | 'lastEr
     mediaError: null,
   }
   await update<OutboxEntry[]>(OUTBOX_KEY, (existing) => [...(existing ?? []), full])
-  if (hasMedia && entry.media) {
-    await storeMediaBlobs(full.id, entry.media)
-  }
   notify()
 }
 
@@ -126,6 +147,16 @@ export async function retryMediaEntry(id: string): Promise<void> {
     e.mediaStatus = 'pending'
     e.mediaAttempts = 0
     e.mediaError = null
+  })
+  notify()
+}
+
+export async function discardMediaEntry(id: string): Promise<void> {
+  await removeMediaBlobs(id)
+  await updateOutboxEntry(id, (e) => {
+    e.mediaStatus = 'none'
+    e.mediaError = null
+    e.mediaAttempts = 0
   })
   notify()
 }
@@ -204,11 +235,7 @@ export async function flushOutbox(userId: string): Promise<void> {
         } else {
           const apiError = toApiError(error, status)
 
-          if (apiError.code === '23505') {
-            await updateOutboxEntry(entry.id, (e) => { e.status = 'done'; e.lastError = null })
-            currentStatus = 'done'
-            anySynced = true
-          } else if (apiError.isAuth) {
+          if (apiError.isAuth) {
             await updateOutboxEntry(entry.id, (e) => {
               e.attempts += 1
               e.lastError = apiError.message
@@ -269,7 +296,9 @@ export async function flushOutbox(userId: string): Promise<void> {
         }
       }
 
-      if (entry.mediaStatus === 'pending' && currentStatus === 'done') {
+      const entryMediaStatus = safeMediaStatus(entry)
+
+      if (entryMediaStatus === 'pending' && currentStatus === 'done') {
         try {
           await uploadMediaForEntry(entry)
           notify()
@@ -302,7 +331,7 @@ export async function flushOutbox(userId: string): Promise<void> {
       }
 
       const current = (await getOutboxEntries(userId)).find((e) => e.id === entry.id)
-      if (current && current.status === 'done' && current.mediaStatus === 'none') {
+      if (current && current.status === 'done' && safeMediaStatus(current) === 'none') {
         await removeOutboxEntry(entry.id)
         anySynced = true
       }

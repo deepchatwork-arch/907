@@ -73,6 +73,10 @@ export const ar: Dict = {
     mediaTooMany: 'حد أقصى ٦ ملفات',
     mediaFailed: 'فشل تحميل الميديا',
     mediaRetry: 'إعادة الميديا',
+    mediaPending: 'الميديا بيستنى الإرسال',
+    mediaWillRetry: 'الميديا هتبعت بعدين',
+    mediaTotalTooBig: 'حجم الميديا كله أكبر من ١٥٠ ميجا',
+    mediaDelete: 'امسح الميديا',
   },
   incidents: {
     title: 'طلب جديد',
@@ -169,6 +173,10 @@ export const ar: Dict = {
     outboxRetry: 'ابعت تاني',
     outboxDelete: 'امسح',
     outboxSynced: 'اتبعت',
+    outboxMediaFailed: 'الميديا ما اتبعتش',
+    outboxMediaRetry: 'إعادة الميديا',
+    outboxMediaDelete: 'امسح الميديا',
+    outboxMediaPending: 'الميديا في الانتظار',
     loadFailed: 'فشل تحميل البيانات',
   },
   common: {

@@ -18,7 +18,7 @@ import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
 import { formatDateTime, isToday, formatQty } from '@/lib/format'
 import { toast, errorMessage } from '@/lib/toast'
-import { getOutboxSummary, subscribe, flushOutbox } from '@/lib/outbox'
+import { getOutboxSummary, getOutboxEntries, subscribe, flushOutbox, retryMediaEntry, discardMediaEntry, type OutboxEntry } from '@/lib/outbox'
 import {
   CircleCheck as CheckCircle2, Wrench, Search, Send, Camera, Video, X, FileText,
   Loader as Loader2, MessageCircle, RefreshCw, ChevronRight, Image as ImageIcon,
@@ -61,6 +61,9 @@ export function QrApartmentPage() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [pendingCount, setPendingCount] = useState(0)
   const [failedCount, setFailedCount] = useState(0)
+  const [mediaFailedCount, setMediaFailedCount] = useState(0)
+  const [mediaPendingCount, setMediaPendingCount] = useState(0)
+  const [mediaFailedEntries, setMediaFailedEntries] = useState<OutboxEntry[]>([])
   const [tab, setTab] = useState<Tab>('norms')
   const [cleaningEvents, setCleaningEvents] = useState<SvCleaningEvent[]>([])
   const [search, setSearch] = useState('')
@@ -116,6 +119,11 @@ export function QrApartmentPage() {
         getOutboxSummary(profile.id).then((s) => {
           setPendingCount(s.pending)
           setFailedCount(s.failed)
+          setMediaFailedCount(s.mediaFailed)
+          setMediaPendingCount(s.mediaPending)
+        })
+        getOutboxEntries(profile.id).then((entries) => {
+          setMediaFailedEntries(entries.filter((e) => (e.mediaStatus ?? 'none') === 'failed'))
         })
       }
       refreshOutbox()
@@ -535,13 +543,32 @@ export function QrApartmentPage() {
             <span className="truncate">{t.qr.historyTab}</span>
           </button>
         </div>
-        {(pendingCount > 0 || failedCount > 0) && (
+        {(pendingCount > 0 || failedCount > 0 || mediaPendingCount > 0 || mediaFailedCount > 0) && (
           <div className="text-center text-xs mt-1 space-y-1">
             {pendingCount > 0 && (
               <p className="text-warn">{t.errors.outboxQueued}: {n(String(pendingCount))}</p>
             )}
             {failedCount > 0 && (
               <p className="text-bad">{t.errors.outboxFailed}: {n(String(failedCount))}</p>
+            )}
+            {mediaPendingCount > 0 && (
+              <p className="text-warn">{t.errors.outboxMediaPending}: {n(String(mediaPendingCount))}</p>
+            )}
+            {mediaFailedCount > 0 && (
+              <div className="space-y-1">
+                <p className="text-bad">{t.errors.outboxMediaFailed}: {n(String(mediaFailedCount))}</p>
+                {mediaFailedEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-center gap-2 text-bad">
+                    <span className="truncate max-w-[140px]">{entry.mediaError ?? 'Error'}</span>
+                    <button onClick={() => { retryMediaEntry(entry.id).then(() => { if (profile) flushOutbox(profile.id).catch(() => {}) }) }} className="font-medium text-warn">
+                      {t.errors.outboxMediaRetry}
+                    </button>
+                    <button onClick={() => discardMediaEntry(entry.id)} className="font-medium text-bad">
+                      {t.errors.outboxMediaDelete}
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

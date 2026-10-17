@@ -70,6 +70,10 @@ export const ru = {
     mediaTooMany: 'Максимум 6 файлов',
     mediaFailed: 'Не удалось загрузить медиа',
     mediaRetry: 'Повторить медиа',
+    mediaPending: 'Медиа ожидает отправки',
+    mediaWillRetry: 'Медиа будет отправлено позже',
+    mediaTotalTooBig: 'Общий объём медиа превышает 150 МБ',
+    mediaDelete: 'Удалить медиа',
   },
   incidents: {
     title: 'Новая заявка',
@@ -166,6 +170,10 @@ export const ru = {
     outboxRetry: 'Повторить',
     outboxDelete: 'Удалить',
     outboxSynced: 'Отправлено',
+    outboxMediaFailed: 'Медиа не отправлено',
+    outboxMediaRetry: 'Повторить медиа',
+    outboxMediaDelete: 'Удалить медиа',
+    outboxMediaPending: 'Медиа в очереди',
     loadFailed: 'Не удалось загрузить данные',
   },
   common: {

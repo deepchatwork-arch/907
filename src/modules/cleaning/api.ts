@@ -3,6 +3,8 @@ import { toApiError } from '@/lib/errors'
 import { resolveMime, extForMime } from '@/lib/files'
 import type { CleaningResult } from '@/lib/database.types'
 import { addOutboxEntry } from '@/lib/outbox'
+import { toast } from '@/lib/toast'
+import { currentDict } from '@/i18n'
 
 export async function completeCleaning(params: {
   userId: string
@@ -23,11 +25,7 @@ export async function completeCleaning(params: {
     p_note: params.note,
   })
   if (error) {
-    const apiError = toApiError(error, status)
-    if (apiError.code === '23505') {
-      return { duplicate: true, shortages: [] } as unknown as CleaningResult
-    }
-    throw apiError
+    throw toApiError(error, status)
   }
   const result = data as CleaningResult
 
@@ -35,7 +33,19 @@ export async function completeCleaning(params: {
     try {
       await uploadAndAttachMedia(params.userId, params.clientOpId, params.media)
     } catch {
-      // Cleaning succeeded — media failure is non-fatal, will be retried via outbox
+      await addOutboxEntry({
+        id: crypto.randomUUID(),
+        userId: params.userId,
+        apartmentId: params.apartmentId,
+        cleanedAt: params.cleanedAt,
+        clientOpId: params.clientOpId,
+        staffIds: params.staffIds,
+        leadStaffId: params.leadStaffId,
+        note: params.note,
+        createdAt: Date.now(),
+        media: params.media,
+      })
+      toast(currentDict().cleaning.mediaWillRetry, 'info')
     }
   }
 

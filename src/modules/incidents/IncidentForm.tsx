@@ -7,7 +7,8 @@ import { useAuth } from '@/modules/core/store'
 import { useI18n } from '@/i18n'
 import { friendlyMessage } from '@/lib/errors'
 import { ErrorState } from '@/components/ErrorState'
-import { resolveMime } from '@/lib/files'
+import { resolveMime, isHeicFile } from '@/lib/files'
+import { compressImage } from '@/lib/compress'
 import { currentDict } from '@/i18n'
 import { ArrowLeft, Camera, Video as VideoIcon, X, Loader as Loader2 } from 'lucide-react'
 
@@ -58,6 +59,7 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [converting, setConverting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const clientOpIdRef = useRef<string>(crypto.randomUUID())
   const isOnline = navigator.onLine
@@ -77,26 +79,45 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id])
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (incoming.length === 0) return
     const remaining = MAX_FILES - photos.length
     if (remaining <= 0) {
       setError(t.incidents.mediaTooMany)
-      e.target.value = ''
       return
     }
-    const files = incoming.slice(0, remaining)
+    const d = currentDict().incidents
     const valid: File[] = []
-    for (const file of files) {
+    let hadError = false
+
+    for (const file of incoming.slice(0, remaining)) {
+      if (isHeicFile(file)) {
+        setConverting(true)
+        try {
+          const converted = await compressImage(file)
+          const convertedFile = new File([converted], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' })
+          if (convertedFile.size > MAX_FILE_SIZE) { setError(d.mediaTooBig); hadError = true; continue }
+          valid.push(convertedFile)
+        } catch {
+          setError(currentDict().heicNotSupported)
+          hadError = true
+        } finally {
+          setConverting(false)
+        }
+        continue
+      }
       const err = validateMediaFile(file)
-      if (err) { setError(err); e.target.value = ''; return }
+      if (err) { setError(err); hadError = true; continue }
       valid.push(file)
     }
-    if (valid.length === 0) return
-    setError(null)
-    setPhotos((prev) => [...prev, ...valid])
-    setPhotoPreviews((prev) => [...prev, ...valid.map((f) => URL.createObjectURL(f))])
-    e.target.value = ''
+
+    if (valid.length > 0) {
+      if (!hadError) setError(null)
+      setPhotos((prev) => [...prev, ...valid])
+      setPhotoPreviews((prev) => [...prev, ...valid.map((f) => URL.createObjectURL(f))])
+    }
   }
 
   const removePhoto = (idx: number) => {
@@ -198,20 +219,20 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
                 </div>
               )
             })}
-            {photos.length < MAX_FILES && isOnline && (
+            {photos.length < MAX_FILES && isOnline && !converting && (
               <button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 border-2 border-dashed border-line rounded-xl flex items-center justify-center text-muted hover:border-accent">
                 <Camera className="w-6 h-6" />
               </button>
             )}
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.webm" multiple onChange={handlePhotoSelect} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,.mov,.webm,.heic,.heif" multiple onChange={handlePhotoSelect} className="hidden" />
         </Field>
         {error && <p className="text-sm text-bad">{error}</p>}
       </div>
       <div className="fixed bottom-16 left-0 right-0 bg-surface/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] z-30">
         <div className="max-w-lg mx-auto grid grid-cols-2 gap-3">
           <button onClick={() => backTo ? navigate(backTo) : navigate(-1)} className="min-h-[48px] bg-app text-ink rounded-xl px-2 py-3 text-sm font-medium">{t.incidents.cancel}</button>
-          <button onClick={handleSubmit} disabled={submitting || !isOnline}
+          <button onClick={handleSubmit} disabled={submitting || converting || !isOnline}
             className="min-h-[48px] bg-accent text-white rounded-xl px-2 py-3 text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isOnline ? t.incidents.submit : t.errors.needsNetworkAction}
@@ -223,7 +244,6 @@ export function IncidentForm({ backTo }: { backTo?: string }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  const { t } = useI18n()
   return (
     <div>
       <label className="block text-sm font-medium text-ink mb-1.5">{label}</label>
