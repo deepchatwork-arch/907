@@ -372,6 +372,7 @@ export const ru = {
       documents: 'Документы',
       qr: 'QR квартир',
       reports: 'Отчёты',
+      history: 'История',
     },
     reports: {
       title: 'Отчёты',

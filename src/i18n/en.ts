@@ -374,6 +374,7 @@ export const en: Dict = {
       documents: 'Documents',
       qr: 'Apartment QR',
       reports: 'Reports',
+      history: 'History',
     },
     reports: {
       title: 'Reports',

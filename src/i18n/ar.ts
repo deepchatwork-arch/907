@@ -375,6 +375,7 @@ export const ar: Dict = {
       documents: 'المستندات',
       qr: 'QR الشقق',
       reports: 'التقارير',
+      history: 'السجل',
     },
     reports: {
       title: 'التقارير',
