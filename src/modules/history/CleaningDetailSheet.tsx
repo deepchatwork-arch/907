@@ -60,7 +60,7 @@ export function CleaningDetailSheet({ event, canDelete, onClose, onDeleted }: Pr
       const paths = await deleteCleaningEvent(event.id, reason.trim())
       if (paths.length > 0) {
         try { await removeStorageFiles('cleaning-media', paths) }
-        catch { toast(t.history.fileCleanupWarning, 'warn') }
+        catch { toast(t.history.fileCleanupWarning, 'info') }
       }
       toast(t.history.deleted, 'success')
       setConfirmDelete(false)

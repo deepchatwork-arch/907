@@ -51,7 +51,7 @@ export function IncidentDetailSheet({ incident, canDelete, onClose, onDeleted }:
       const paths = await deleteIncidentRecord(incident.id, reason.trim())
       if (paths.length > 0) {
         try { await removeStorageFiles('incident-photos', paths) }
-        catch { toast(t.history.fileCleanupWarning, 'warn') }
+        catch { toast(t.history.fileCleanupWarning, 'info') }
       }
       toast(t.history.deleted, 'success')
       setConfirmDelete(false)
