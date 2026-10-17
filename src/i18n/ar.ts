@@ -263,6 +263,7 @@ export const ar: Dict = {
     detailResolvedAt: 'تاريخ الحل',
     detailResolutionNote: 'ملاحظة الحل',
     detailApartment: 'الشقة',
+    historyOffline: 'السجل متاح أونلاين',
   },
   admin: {
     nav: {

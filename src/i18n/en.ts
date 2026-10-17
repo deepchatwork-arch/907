@@ -262,6 +262,7 @@ export const en: Dict = {
     detailResolvedAt: 'Resolution date',
     detailResolutionNote: 'Resolution note',
     detailApartment: 'Apartment',
+    historyOffline: 'History is available online',
   },
   admin: {
     nav: {

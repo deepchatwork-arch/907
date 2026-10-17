@@ -25,7 +25,7 @@ export async function completeCleaning(params: {
   if (error) {
     const apiError = toApiError(error, status)
     if (apiError.code === '23505') {
-      return { duplicate: true, shortages: [] } as CleaningResult
+      return { duplicate: true, shortages: [] } as unknown as CleaningResult
     }
     throw apiError
   }

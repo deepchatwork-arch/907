@@ -22,6 +22,7 @@ import { getOutboxSummary, subscribe, flushOutbox } from '@/lib/outbox'
 import {
   CircleCheck as CheckCircle2, Wrench, Search, Send, Camera, Video, X, FileText,
   Loader as Loader2, MessageCircle, RefreshCw, ChevronRight, Image as ImageIcon,
+  History as HistoryIcon,
 } from 'lucide-react'
 
 const normTypeOrder: NormType[] = ['asset_standing', 'turnover_replenish', 'cleaning_consumption']
@@ -511,20 +512,27 @@ export function QrApartmentPage() {
 
       {/* Sticky bottom actions */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-surface/95 backdrop-blur border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-        <div className="max-w-lg mx-auto grid grid-cols-2 gap-2">
+        <div className="max-w-lg mx-auto grid grid-cols-3 gap-2">
           <button
             onClick={() => navigate(`/qr/${aptId}/clean`)}
-            className="min-h-[48px] bg-accent text-white rounded-xl px-2 py-3 text-sm sm:text-base font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+            className="min-h-[48px] bg-accent text-white rounded-xl px-1 py-3 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 transition-opacity hover:opacity-90"
           >
             <CheckCircle2 className="w-5 h-5" />
-            {t.qr.cleaned}
+            <span className="truncate">{t.qr.cleaned}</span>
           </button>
           <button
             onClick={() => navigate(`/qr/${aptId}/incident?apartment=${aptId}`)}
-            className="min-h-[48px] bg-surface border border-line text-ink rounded-xl px-2 py-3 text-sm sm:text-base font-medium flex items-center justify-center gap-2 transition-colors hover:bg-app"
+            className="min-h-[48px] bg-surface border border-line text-ink rounded-xl px-1 py-3 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 transition-colors hover:bg-app"
           >
             <Wrench className="w-5 h-5" />
-            {t.qr.reportBreakdown}
+            <span className="truncate">{t.qr.reportBreakdown}</span>
+          </button>
+          <button
+            onClick={() => navigate(`/qr/${aptId}/history`)}
+            className="min-h-[48px] bg-surface border border-line text-ink rounded-xl px-1 py-3 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 transition-colors hover:bg-app"
+          >
+            <HistoryIcon className="w-5 h-5" />
+            <span className="truncate">{t.qr.historyTab}</span>
           </button>
         </div>
         {(pendingCount > 0 || failedCount > 0) && (

@@ -50,8 +50,8 @@ async function storeMediaBlobs(entryId: string, blobs: Blob[]): Promise<void> {
   await idbSet(mediaKey(entryId), blobs)
 }
 
-async function getMediaBlobs(entryId: string): Promise<Blob[] | null> {
-  return await get<Blob[]>(mediaKey(entryId))
+async function getMediaBlobs(entryId: string): Promise<Blob[] | undefined> {
+  return (await get<Blob[]>(mediaKey(entryId))) ?? undefined
 }
 
 async function removeMediaBlobs(entryId: string): Promise<void> {

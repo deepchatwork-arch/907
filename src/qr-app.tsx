@@ -6,6 +6,7 @@ import { QrIndexPage } from '@/modules/qr/QrIndexPage'
 import { QrApartmentPage } from '@/modules/qr/QrApartmentPage'
 import { CleaningSheet } from '@/modules/cleaning/CleaningSheet'
 import { IncidentForm } from '@/modules/incidents/IncidentForm'
+import { QrHistoryPage } from '@/modules/qr/QrHistoryPage'
 import { useAuth, setupAuthListener } from '@/modules/core/store'
 import { LoginScreen } from '@/modules/core/AuthScreens'
 import { useI18n } from '@/i18n'
@@ -94,6 +95,7 @@ function QrApp() {
           <Route path="/qr/:id" element={<QrLayout><QrApartmentPage /></QrLayout>} />
           <Route path="/qr/:id/clean" element={<QrLayout><QrCleanRoute /></QrLayout>} />
           <Route path="/qr/:id/incident" element={<QrLayout><QrIncidentRoute /></QrLayout>} />
+          <Route path="/qr/:id/history" element={<QrLayout><QrHistoryPage /></QrLayout>} />
           <Route path="*" element={<Navigate to="/qr" replace />} />
         </Routes>
       </HashRouter>

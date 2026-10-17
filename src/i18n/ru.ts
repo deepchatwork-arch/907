@@ -260,6 +260,7 @@ export const ru = {
     detailResolvedAt: 'Дата решения',
     detailResolutionNote: 'Примечание к решению',
     detailApartment: 'Квартира',
+    historyOffline: 'История доступна онлайн',
   },
   admin: {
     nav: {
